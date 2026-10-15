@@ -66,7 +66,7 @@ struct FirstAvailableSimilarSongs: SimilarSongsProviding {
 
 // MARK: - Similarity service
 
-/// Calls the Sound-alike similarity service (`similarity-service/` in this repo),
+/// Calls the SoundAlike similarity service (`similarity-service/` in this repo),
 /// which ranks indexed songs by audio features, tags, metadata and tempo.
 ///
 /// The base URL comes from the `SimilarityServiceURL` Info.plist entry

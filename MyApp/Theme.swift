@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Design tokens for Sound-alike.
+/// Design tokens for SoundAlike.
 enum Theme {
     static let background = Color(hex: 0xF3F2F2)
     static let ink = Color(hex: 0x201E1D)

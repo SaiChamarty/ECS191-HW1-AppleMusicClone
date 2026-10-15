@@ -59,7 +59,7 @@ struct PlaylistsView: View {
     /// Matches the Home tab's header.
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Kicker("Sound-alike")
+            Kicker("SoundAlike")
             Text("Playlists")
                 .font(.archivo(.extraBold, size: 34, relativeTo: .largeTitle))
                 .tracking(34 * -0.02)
