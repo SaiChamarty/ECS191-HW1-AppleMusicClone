@@ -1,0 +1,86 @@
+# Tunables for the similarity service. Edit here, not in code.
+
+[taxonomy]
+# Listening contexts Claude may assign. Add new categories to this list;
+# "unknown" must stay (it is the "don't actually know this song" answer).
+contexts = [
+    "anthem",
+    "dance_club",
+    "chill",
+    "romantic",
+    "sad",
+    "workout",
+    "focus",
+    "party",
+    "ballad",
+    "epic_cinematic",
+    "devotional",
+    "unknown",
+]
+max_mood_tags = 3
+
+[score]
+# Final score = weighted sum of components, each in [0, 1].
+audio = 0.50
+tags = 0.25
+metadata = 0.15
+tempo = 0.10
+# Nearest neighbours by audio cosine that get fully scored.
+candidates = 100
+results = 10
+
+[tag_match]
+# Context agreement counts more than mood-tag overlap; the result is scaled
+# by sqrt(query confidence * candidate confidence).
+context = 0.7
+mood = 0.3
+
+[metadata_match]
+artist = 0.4
+genre = 0.35
+year = 0.25
+year_window = 3
+
+[tempo_match]
+# Closeness = exp(-(d / sigma)^2), d = log2 BPM distance folded so that
+# half/double time count as close. 0.15 octaves ≈ 11% BPM difference.
+sigma_octaves = 0.15
+
+[features.group_weights]
+# Relative weight of each feature group in the audio vector. Each group's
+# dimensions are scaled by weight / sqrt(group size) after z-scoring, so a
+# 40-dim group (MFCC) doesn't drown out a 4-dim one (rhythm).
+rhythm = 1.0
+energy = 1.0
+spectral = 1.0
+mfcc = 1.5
+chroma = 0.75
+
+[itunes]
+country = "us"
+# The Search API allows roughly 20 requests/minute.
+min_interval_seconds = 3.1
+max_retries = 5
+backoff_base_seconds = 2.0
+download_concurrency = 8
+
+[expansion]
+# After each query the API server analyzes candidate songs around it in the
+# background: the artist's other songs, the genre's top chart in the user's
+# storefront, and more songs filed under that genre.
+enabled = true
+artist_songs = 25
+chart_size = 100
+genre_songs = 50
+max_new_tracks = 80     # per query
+max_queue = 50          # pending jobs; further requests skip expansion
+workers = 4             # feature-extraction processes
+keep_previews = false   # delete audio once features are cached
+
+[tagging]
+batch_size = 20
+max_tokens = 8000
+
+[rerank]
+candidates = 15
+max_tokens = 4000

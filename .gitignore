@@ -1,0 +1,9 @@
+Secrets.xcconfig
+xcuserdata/
+.DS_Store
+# Similarity service: audio cache, generated index, local env
+similarity-service/cache/
+similarity-service/data/
+similarity-service/.venv/
+__pycache__/
+.pytest_cache/
