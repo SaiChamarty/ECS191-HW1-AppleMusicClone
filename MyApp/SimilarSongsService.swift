@@ -69,7 +69,8 @@ struct FirstAvailableSimilarSongs: SimilarSongsProviding {
 /// Calls the Sound-alike similarity service (`similarity-service/` in this repo),
 /// which ranks indexed songs by audio features, tags, metadata and tempo.
 ///
-/// The base URL comes from the `SimilarityServiceURL` Info.plist entry.
+/// The base URL comes from the `SimilarityServiceURL` Info.plist entry
+/// (the hosted service, https://soundalike.junebase.com).
 /// See README.md for the API contract.
 ///
 /// After answering, the service keeps analyzing candidate songs around the
@@ -121,9 +122,12 @@ struct SimilarityServiceClient: SimilarSongsProviding {
         }
     }
 
+    /// The hosted service from Info.plist, unless the `SIMILARITY_SERVICE_URL`
+    /// environment variable (set in the Xcode scheme) points at a local server.
     static var configuredURL: URL? {
-        guard let value = Bundle.main.object(forInfoDictionaryKey: "SimilarityServiceURL") as? String,
-              !value.isEmpty, !value.hasPrefix("$(")
+        let override = ProcessInfo.processInfo.environment["SIMILARITY_SERVICE_URL"]
+        let plist = Bundle.main.object(forInfoDictionaryKey: "SimilarityServiceURL") as? String
+        guard let value = [override, plist].compactMap({ $0 }).first(where: { !$0.isEmpty && !$0.hasPrefix("$(") })
         else { return nil }
         return URL(string: value)
     }

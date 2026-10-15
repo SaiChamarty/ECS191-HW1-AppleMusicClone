@@ -10,7 +10,7 @@
 		<true/>
 	</dict>
 	<key>SimilarityServiceURL</key>
-	<string>http://127.0.0.1:8765</string>
+	<string>https://soundalike.junebase.com</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Archivo-Regular.ttf</string>

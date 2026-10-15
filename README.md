@@ -6,40 +6,52 @@ An iPhone app that finds songs that **sound like** a song you pick, in any genre
 - **Find Similar Songs**: get 10 songs that sound alike, ranked by how they actually sound (tempo, energy, timbre), plus catalog data.
 - **Playlists**: save any song to your own playlists, Apple Music style.
 
-The project has two parts that run together:
+The project has two parts:
 
 ```
-Untitled Project/
-├── MyApp/                  iOS app — SwiftUI, iOS 17+ (open "Untitled Project.xcodeproj")
-├── similarity-service/     Python server that analyzes audio and ranks similar songs
-└── README.md               this file
+ECS191-HW1-AppleMusicClone/
+├── MyApp/                       iOS app — Swift/SwiftUI, iOS 17+
+├── Untitled Project.xcodeproj   open this in Xcode
+├── similarity-service/          Python server that analyzes audio and ranks similar songs
+├── README.md                    this file
+└── proposal.md                  the original project proposal
 ```
 
-The app works on its own, but similar-song results come from the server. Without the server running, the app falls back to a basic offline ranking.
+The app talks to a **hosted similarity server at <https://soundalike.junebase.com>**, so you don't need to run anything yourself. If the server can't be reached, the app falls back to a basic offline ranking.
 
 ---
 
-## 1. Running it
+## 1. Build and run (no setup needed)
 
-### Start the server (Terminal)
+**Requirements:** a Mac with **Xcode 27** and an internet connection. No accounts, keys or extra installs are needed.
 
-```bash
-cd ~/Library/Developer/Xcode/UntitledProjects/"Untitled Project"/similarity-service
-.venv/bin/uvicorn similarity.api:app --host 127.0.0.1 --port 8765
-```
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/SaiChamarty/ECS191-HW1-AppleMusicClone.git
+   ```
+2. Open **`Untitled Project.xcodeproj`** in Xcode.
+3. In the toolbar, choose the **MyApp** scheme and an **iPhone simulator** (e.g. iPhone 18 Pro).
+4. Press **Run** (▶).
 
-Wait for `Application startup complete`, then leave the window open. **Ctrl+C** stops it.
-Check it's up: open <http://127.0.0.1:8765/health> → `{"status":"ok","tracks":…}`.
+Signing isn't needed for the simulator. To run on a real iPhone, select your own team under the **MyApp** target → **Signing & Capabilities**.
 
-### Run the app (Xcode)
+**To confirm it's using the server:** the gray line under each similar-song result reads like `74% match · sound 63% · 144 BPM · chill`. If it ends in "— shared feel" instead, the server wasn't reachable and you're seeing the offline fallback. Server status: <https://soundalike.junebase.com/health>.
 
-Open `Untitled Project.xcodeproj` and press **Run** (▶) on an iPhone simulator. The app looks for the server at `http://127.0.0.1:8765` (`SimilarityServiceURL` in `MyApp/Info.plist`).
+### Try the main features
 
-**How to tell whether the server is being used:** the gray line under each result reads `52% match · sound 61% · 118 BPM` when the server answered. If it ends in "— shared feel", the server wasn't reachable and the app used its offline fallback.
+1. **Home tab:** the Popular list shows today's top songs for your region. Tap **▶** on any row to hear its 30-second preview.
+2. **Search:** type any song or artist (any language). Results show artwork, **▶**, and **•••**.
+3. **Find similar songs:** tap a song → **Find 10 similar songs**, or use **•••** → **Find Similar Songs**. If the song is new to the server, the first answer takes a few seconds. The list may then update itself while the footer says *"Analyzing more songs like this…"*.
+4. **Playlists:** on any song, **•••** → **Add to Playlist** → **New Playlist…**, then name it. Open the **Playlists** tab to see it. Inside a playlist you can play songs, find similar songs, swipe to remove, or rename/delete it from the top-right **•••**.
+5. **Long-press** any song row for the same actions.
 
-### First-time setup on a new Mac
+---
 
-The virtualenv, index and caches are git-ignored, so a fresh checkout needs:
+## 1b. Running your own server (optional, for development)
+
+You only need this to change the server or run it yourself. The app ships pointing at the hosted server.
+
+### One-time setup
 
 ```bash
 brew install ffmpeg uv                      # ffmpeg decodes the AAC previews
@@ -49,7 +61,29 @@ uv pip install --python .venv/bin/python -r requirements-dev.txt
 .venv/bin/python -m similarity.index --seeds seeds.csv --charts us,gb,in,br,mx,jp,ng,za,fr,de,eg,tr,id,au --discard-audio
 ```
 
-The last command builds the song index: about 1,100 songs, roughly 10 minutes the first time.
+The last command builds the song index: about 1,100 songs, roughly 10 minutes the first time. The virtualenv, index and caches are git-ignored.
+
+### Start it
+
+```bash
+cd similarity-service
+.venv/bin/uvicorn similarity.api:app --host 127.0.0.1 --port 8765
+```
+
+Wait for `Application startup complete`, then leave it running (**Ctrl+C** stops it). Check it with <http://127.0.0.1:8765/health>.
+
+### Point the app at your local server
+
+In Xcode: **Product → Scheme → Edit Scheme… → Run → Arguments → Environment Variables**, add
+`SIMILARITY_SERVICE_URL` = `http://127.0.0.1:8765`. Remove it to go back to the hosted server; `Info.plist` doesn't need to change.
+
+For a real iPhone on the same Wi-Fi, start the server with `--host 0.0.0.0` and use your Mac's local IP instead (e.g. `http://192.168.1.20:8765`).
+
+### How the hosted server is run
+
+`soundalike.junebase.com` runs this same service behind a **Cloudflare Tunnel**:
+- uvicorn listens only on `127.0.0.1:8765` on the host.
+- `cloudflared` forwards `https://soundalike.junebase.com` to it, so there are no open ports and HTTPS is provided by Cloudflare.
 
 ### Optional: Claude tags
 
@@ -62,10 +96,6 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 Always pass the same `--seeds`/`--charts` as before. The index is rebuilt from what you pass, plus songs added by searches, so leaving `--charts` off drops the chart songs.
-
-### Running on a real iPhone
-
-`127.0.0.1` means "this device", so a phone can't reach your Mac with it. Start the server with `--host 0.0.0.0`, set `SimilarityServiceURL` in `Info.plist` to your Mac's local IP (e.g. `http://192.168.1.20:8765`), and keep both on the same Wi-Fi.
 
 ---
 
@@ -132,7 +162,7 @@ The query song itself and other versions of it (remasters, live, edits) are excl
 
 ### Fallbacks (the app never shows an error for this)
 
-1. **Similarity server**: the normal path.
+1. **Similarity server** (`https://soundalike.junebase.com`): the normal path.
 2. **In-app Claude call**: only if a key is configured in `Secrets.xcconfig`. Development only.
 3. **Offline ranking**: the 26 bundled songs, ranked by shared tags and release year.
 
@@ -160,7 +190,7 @@ Search falls back the same way: iTunes first, then the bundled list when offline
 | `Song.swift` | The song model used everywhere |
 | `ArtworkTile.swift` | Album art (real artwork, or a coloured letter tile as a placeholder) |
 | `Theme.swift` | Colours, Archivo fonts, small shared views |
-| `Info.plist` | `SimilarityServiceURL`, local-network permission, fonts |
+| `Info.plist` | `SimilarityServiceURL` (the hosted server), local-network permission for development, fonts |
 
 ### Similarity service (`similarity-service/`)
 
@@ -220,7 +250,7 @@ Environment variables (all optional):
 
 ## 5. API
 
-Base URL in development: `http://127.0.0.1:8765`. JSON fields use snake_case.
+Base URL: `https://soundalike.junebase.com` (hosted), or `http://127.0.0.1:8765` when running locally. JSON fields use snake_case.
 
 ### `POST /v1/similar`
 
@@ -283,11 +313,13 @@ A `Track` has these fields: `track_id`, `title`, `artist`, `album`, `genre`, `re
 
 ## 7. Going to production
 
-Nothing is deployed. To ship:
+**Current deployment:** the service runs on a home server behind a Cloudflare Tunnel at `https://soundalike.junebase.com`, and the app points there by default. That's enough for a demo and for grading.
 
-1. **Host the server.** Run it behind HTTPS on any container host with `ffmpeg`. Build the index offline and ship or mount `data/`.
-2. **Point the app at it.** Set `SimilarityServiceURL` to the HTTPS URL, and remove `NSAllowsLocalNetworking` from `Info.plist`.
-3. **Protect it.** Add authentication and rate limiting; each new song costs a download and an analysis.
+For a real release:
+
+1. **Host the server somewhere reliable.** Any container host with `ffmpeg` works, still behind HTTPS. Build the index offline and ship or mount `data/`.
+2. **Tighten the app's settings.** Keep `SimilarityServiceURL` on the HTTPS URL, and remove `NSAllowsLocalNetworking` from `Info.plist`; it's only for local development.
+3. **Protect it.** The API is public and has no login. Add authentication, or at least a Cloudflare rate-limiting rule, because each new song costs a download and an analysis. Don't put a Cloudflare challenge (Bot Fight Mode / Under Attack) in front of it, since the app can't solve challenge pages.
 4. **Keep keys server-side.** Don't ship the in-app Claude fallback's key (`Secrets.xcconfig`) in a release build.
 5. **Scale up.** Numpy search is fine to ~100k songs. Beyond that, add FAISS in `scoring.rank`.
 
