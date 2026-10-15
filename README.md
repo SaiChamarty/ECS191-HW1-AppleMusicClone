@@ -11,7 +11,7 @@ The project has two parts:
 ```
 ECS191-HW1-AppleMusicClone/
 ├── MyApp/                       iOS app — Swift/SwiftUI, iOS 17+
-├── Untitled Project.xcodeproj   open this in Xcode
+├── SoundAlike.xcodeproj   open this in Xcode
 ├── similarity-service/          Python server that analyzes audio and ranks similar songs
 ├── README.md                    this file
 └── proposal.md                  the original project proposal
@@ -29,7 +29,7 @@ The app talks to a **hosted similarity server at <https://soundalike.junebase.co
    ```bash
    git clone https://github.com/SaiChamarty/ECS191-HW1-AppleMusicClone.git
    ```
-2. Open **`Untitled Project.xcodeproj`** in Xcode.
+2. Open **`SoundAlike.xcodeproj`** in Xcode.
 3. In the toolbar, choose the **MyApp** scheme and an **iPhone simulator** (e.g. iPhone 18 Pro).
 4. Press **Run** (▶).
 
