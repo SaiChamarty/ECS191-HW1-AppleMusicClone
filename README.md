@@ -57,8 +57,11 @@ Set `ANTHROPIC_API_KEY` before starting the server or the indexer. Songs then ge
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-.venv/bin/python -m similarity.index        # tags the existing index (cached, one call per 20 songs)
+# Rerun the same seeds + charts as the original build (one Claude call per 20 songs):
+.venv/bin/python -m similarity.index --seeds seeds.csv --charts us,gb,in,br,mx,jp,ng,za,fr,de,eg,tr,id,au --discard-audio
 ```
+
+Always pass the same `--seeds`/`--charts` as before. The index is rebuilt from what you pass, plus songs added by searches, so leaving `--charts` off drops the chart songs.
 
 ### Running on a real iPhone
 

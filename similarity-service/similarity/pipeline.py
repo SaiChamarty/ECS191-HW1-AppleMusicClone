@@ -80,9 +80,23 @@ def extract_all(audio: dict[int, Path], workers: int) -> dict[int, np.ndarray]:
 
 
 def analyze(tracks: list[Track], workers: int = 4, discard_audio: bool = False) -> list[tuple[Track, np.ndarray]]:
-    """Downloads previews and extracts features. Returns tracks that could be analyzed."""
-    audio = asyncio.run(download_previews(tracks))
-    vectors = extract_all(audio, workers)
+    """Downloads previews and extracts features. Returns tracks that could be analyzed.
+
+    Songs whose features are already cached are not downloaded again.
+    """
+    vectors: dict[int, np.ndarray] = {}
+    needs_audio: list[Track] = []
+    for track in tracks:
+        cached = features.feature_path(track.track_id)
+        if cached.exists() and (vector := np.load(cached)).shape == (features.DIMENSIONS,):
+            vectors[track.track_id] = vector
+        else:
+            needs_audio.append(track)
+    if vectors:
+        log.info("Features already cached for %d tracks; downloading previews for %d", len(vectors), len(needs_audio))
+
+    audio = asyncio.run(download_previews(needs_audio)) if needs_audio else {}
+    vectors.update(extract_all(audio, workers))
     if discard_audio:
         # Features are cached, so the preview is no longer needed.
         for track_id in vectors:
