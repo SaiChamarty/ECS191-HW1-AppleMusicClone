@@ -23,7 +23,7 @@ struct SongActions: View {
 
         Menu("Add to Playlist", systemImage: "text.badge.plus") {
             Button("New Playlist…", systemImage: "plus") {
-                playlists.requestNewPlaylist(adding: song)
+                playlists.requestNewPlaylist(adding: [song])
             }
             if !playlists.playlists.isEmpty {
                 Divider()

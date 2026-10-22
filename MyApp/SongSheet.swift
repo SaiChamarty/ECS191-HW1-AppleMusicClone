@@ -181,6 +181,8 @@ private struct ResultsContent: View {
     let song: Song
     var viewModel: SearchViewModel
 
+    @Environment(PlaylistStore.self) private var playlists
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
@@ -211,7 +213,11 @@ private struct ResultsContent: View {
                 .accessibilityHint("Closes the results")
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 16)
+            .padding(.bottom, 14)
+
+            addAllMenu
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
 
             Hairline()
 
@@ -247,6 +253,37 @@ private struct ResultsContent: View {
             }
             .scrollIndicators(.hidden)
         }
+    }
+
+    /// Adds every result at once, to a new playlist or an existing one.
+    private var addAllMenu: some View {
+        Menu {
+            Button("New Playlist…", systemImage: "plus") {
+                playlists.requestNewPlaylist(adding: viewModel.results, suggestedName: "Songs like \(song.title)")
+            }
+            if !playlists.playlists.isEmpty {
+                Divider()
+            }
+            ForEach(playlists.playlists) { playlist in
+                Button(playlist.name) {
+                    playlists.add(viewModel.results, to: playlist.id)
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "text.badge.plus")
+                Text("Add all \(viewModel.results.count) to a playlist")
+                Spacer(minLength: 0)
+            }
+            .font(.archivo(.extraBold, size: 15, relativeTo: .headline))
+            .foregroundStyle(Theme.background)
+            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity, minHeight: 46)
+            .background(Capsule().fill(Theme.accent))
+            .contentShape(Capsule())
+        }
+        .disabled(viewModel.results.isEmpty)
+        .accessibilityHint("Choose a playlist for all of these songs")
     }
 }
 

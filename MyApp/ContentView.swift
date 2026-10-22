@@ -65,10 +65,15 @@ struct ContentView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Kicker("SoundAlike")
-            Text("Search")
+            Text("Find Similar Songs")
                 .font(.archivo(.extraBold, size: 34, relativeTo: .largeTitle))
                 .tracking(34 * -0.02)
                 .accessibilityAddTraits(.isHeader)
+            Text("Search for a song you love and we’ll find 10 more with the same vibe.")
+                .font(.archivo(.regular, size: 15, relativeTo: .subheadline))
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
         }
     }
 
@@ -161,9 +166,9 @@ private struct SearchField: View {
                 .accessibilityHidden(true)
 
             TextField(
-                "Songs, artists",
+                "Search a song or artist",
                 text: $query,
-                prompt: Text("Songs, artists").foregroundStyle(Theme.ink.opacity(0.45))
+                prompt: Text("Search a song or artist").foregroundStyle(Theme.ink.opacity(0.45))
             )
             .font(.archivo(.regular, size: 16, relativeTo: .body))
             .foregroundStyle(Theme.ink)

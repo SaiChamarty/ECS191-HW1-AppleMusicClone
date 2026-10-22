@@ -120,9 +120,13 @@ struct PlaylistDetailView: View {
     @Environment(PlaylistStore.self) private var playlists
     @Environment(SearchViewModel.self) private var viewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var isRenaming = false
     @State private var isConfirmingDelete = false
     @State private var draftName = ""
+    @State private var isExporting = false
+    /// Shown after an export that skipped songs, or failed outright.
+    @State private var exportMessage: ExportMessage?
 
     var body: some View {
         if let playlist = playlists.playlist(id: playlistID) {
@@ -170,6 +174,27 @@ struct PlaylistDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
+                        ShareLink(
+                            "Share Playlist…",
+                            item: playlist.shareText,
+                            subject: Text(playlist.name),
+                            preview: SharePreview(playlist.name)
+                        )
+                        Button("Add to Apple Music", systemImage: "music.note") {
+                            export(playlist)
+                        }
+                    } label: {
+                        if isExporting {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                    }
+                    .disabled(playlist.songs.isEmpty || isExporting)
+                    .accessibilityLabel("Share playlist")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
                         Button("Rename", systemImage: "pencil") {
                             draftName = playlist.name
                             isRenaming = true
@@ -194,8 +219,50 @@ struct PlaylistDetailView: View {
                     playlists.delete(playlistID)
                 }
             }
+            .alert(exportMessage?.title ?? "", isPresented: isShowingExportMessage, presenting: exportMessage) { message in
+                if message.canOpenMusic {
+                    Button("Open Apple Music") { openURL(AppleMusicExporter.musicAppURL) }
+                }
+                Button("OK", role: .cancel) {}
+            } message: { message in
+                Text(message.body)
+            }
         } else {
             ContentUnavailableView("Playlist Not Found", systemImage: "music.note.list")
+        }
+    }
+
+    private var isShowingExportMessage: Binding<Bool> {
+        Binding(
+            get: { exportMessage != nil },
+            set: { if !$0 { exportMessage = nil } }
+        )
+    }
+
+    /// Copies the playlist into Apple Music, then opens the Music app.
+    private func export(_ playlist: Playlist) {
+        isExporting = true
+        Task {
+            defer { isExporting = false }
+            do {
+                let result = try await AppleMusicExporter.export(playlist)
+                if result.skipped == 0 {
+                    openURL(AppleMusicExporter.musicAppURL)
+                } else {
+                    let missing = result.skipped == 1 ? "1 song wasn't" : "\(result.skipped) songs weren't"
+                    exportMessage = ExportMessage(
+                        title: "Added to Apple Music",
+                        body: "“\(playlist.name)” is in your Apple Music library. \(missing) available in Apple Music.",
+                        canOpenMusic: true
+                    )
+                }
+            } catch {
+                exportMessage = ExportMessage(
+                    title: "Couldn't Add to Apple Music",
+                    body: error.localizedDescription,
+                    canOpenMusic: false
+                )
+            }
         }
     }
 
@@ -214,6 +281,12 @@ struct PlaylistDetailView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
     }
+}
+
+private struct ExportMessage {
+    let title: String
+    let body: String
+    let canOpenMusic: Bool
 }
 
 private struct PlaylistSongRow: View {

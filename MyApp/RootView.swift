@@ -53,18 +53,18 @@ struct RootView: View {
         .onChange(of: playlists.newPlaylistRequest) { _, request in
             if let request {
                 pendingRequest = request
-                newPlaylistName = ""
+                newPlaylistName = request.suggestedName
             }
         }
         .alert("New Playlist", isPresented: isNamingPlaylist) {
             TextField("Playlist Name", text: $newPlaylistName)
             Button("Cancel", role: .cancel) {}
             Button("Create") {
-                playlists.createPlaylist(named: newPlaylistName, adding: pendingRequest?.song)
+                playlists.createPlaylist(named: newPlaylistName, adding: pendingRequest?.songs ?? [])
             }
         } message: {
-            if let song = pendingRequest?.song {
-                Text("“\(song.title)” will be added to it.")
+            if let songs = pendingRequest?.songs, let first = songs.first {
+                Text(songs.count == 1 ? "“\(first.title)” will be added to it." : "\(songs.count) songs will be added to it.")
             }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: viewModel.selectionCount)

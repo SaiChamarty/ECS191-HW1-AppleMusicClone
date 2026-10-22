@@ -18,12 +18,28 @@ struct Playlist: Identifiable, Codable, Hashable {
     var songCountText: String {
         songs.count == 1 ? "1 song" : "\(songs.count) songs"
     }
+
+    /// Plain-text track list for the share sheet, with an Apple Music link per song
+    /// so friends without the app can open each one.
+    var shareText: String {
+        let tracks = songs.enumerated().map { index, song in
+            var line = "\(index + 1). \(song.title) – \(song.artist)"
+            if let trackID = song.trackID {
+                line += "\n   https://music.apple.com/\(ITunesCatalog.storefront)/song/\(trackID)"
+            }
+            return line
+        }
+        return (["🎧 \(name) (\(songCountText))", ""] + tracks + ["", "Made with SoundAlike"])
+            .joined(separator: "\n")
+    }
 }
 
-/// Asks the root view to prompt for a new playlist's name; `song` is added once it's created.
+/// Asks the root view to prompt for a new playlist's name; `songs` are added once it's created.
 struct NewPlaylistRequest: Identifiable, Equatable {
     let id = UUID()
-    let song: Song?
+    let songs: [Song]
+    /// Pre-filled in the name field (e.g. "Songs like Midnight City").
+    var suggestedName = ""
 }
 
 /// The user's playlists, saved as JSON in Application Support.
@@ -56,38 +72,51 @@ final class PlaylistStore {
 
     // MARK: Editing
 
-    func requestNewPlaylist(adding song: Song? = nil) {
-        newPlaylistRequest = NewPlaylistRequest(song: song)
+    func requestNewPlaylist(adding songs: [Song] = [], suggestedName: String = "") {
+        newPlaylistRequest = NewPlaylistRequest(songs: songs, suggestedName: suggestedName)
     }
 
     @discardableResult
-    func createPlaylist(named name: String, adding song: Song? = nil) -> Playlist {
+    func createPlaylist(named name: String, adding songs: [Song] = []) -> Playlist {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let playlist = Playlist(name: trimmed.isEmpty ? "New Playlist" : trimmed, songs: song.map { [$0] } ?? [])
+        var unique = Set<Song.ID>()
+        let stored = songs.filter { unique.insert($0.id).inserted }.map(Self.stored)
+        let playlist = Playlist(name: trimmed.isEmpty ? "New Playlist" : trimmed, songs: stored)
         // Newest first, like Apple Music's recently added order.
         playlists.insert(playlist, at: 0)
         save()
-        if song != nil {
+        if !stored.isEmpty {
             addedCount += 1
-            show("Added to \(playlist.name)")
+            show(stored.count == 1 ? "Added to \(playlist.name)" : "Added \(stored.count) songs to \(playlist.name)")
         }
         return playlist
     }
 
     func add(_ song: Song, to playlistID: Playlist.ID) {
+        add([song], to: playlistID)
+    }
+
+    /// Appends the songs not already in the playlist, keeping their order.
+    func add(_ songs: [Song], to playlistID: Playlist.ID) {
         guard let index = playlists.firstIndex(where: { $0.id == playlistID }) else { return }
         let name = playlists[index].name
-        if playlists[index].songs.contains(where: { $0.id == song.id }) {
-            show("Already in \(name)")
+        var present = Set(playlists[index].songs.map(\.id))
+        let new = songs.filter { present.insert($0.id).inserted }.map(Self.stored)
+        guard !new.isEmpty else {
+            show(songs.count == 1 ? "Already in \(name)" : "All already in \(name)")
             return
         }
-        // Store the plain song; the similarity "why" line belongs to one search.
-        var stored = song
-        stored.why = nil
-        playlists[index].songs.append(stored)
+        playlists[index].songs.append(contentsOf: new)
         save()
         addedCount += 1
-        show("Added to \(name)")
+        show(new.count == 1 ? "Added to \(name)" : "Added \(new.count) songs to \(name)")
+    }
+
+    /// The plain song; the similarity "why" line belongs to one search.
+    private static func stored(_ song: Song) -> Song {
+        var stored = song
+        stored.why = nil
+        return stored
     }
 
     func removeSong(_ song: Song, from playlistID: Playlist.ID) {
